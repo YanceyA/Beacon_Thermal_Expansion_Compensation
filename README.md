@@ -11,6 +11,8 @@ The macro will home all axis and perform a QGL/Tilt using the printer default se
 
 A seperate macro called in print start will pull the nozzle expansion coefficent and extruder print temperature to calculate and apply the appropriate z_offset automatically at print time.
 
+The expansion offset calibration should only need to be calibrated one time for a given mechanical setup. The variable "beacon_contact_expansion_multiplier" could be tweaked to fine tune the offsets. Currently no strong guidance exists on this.
+
 
 # Pre-Reqs
 - Beacon sensor updated to latest firmware version
@@ -46,7 +48,7 @@ Apply this to the print start macro to calculate and apply a GCODE offset Z_adju
 ```
 
 # Print End
- **Not sure what this does right not, "BEACON_REMOVE_NOZZLE_TEMP_OFFSET" is missing.
+This removes the applied offset at the end of the print.
 
 ```
 # reset nozzle thermal expansion offset
