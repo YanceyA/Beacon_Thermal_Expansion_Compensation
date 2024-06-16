@@ -1,18 +1,20 @@
 > [!IMPORTANT]
 > This macro is in development and performance is not guarenteed. Please provide feedback on any issues or make PRs for changes.
 
-
 # Beacon Thermal Expansion Compensation
-This is a macro set that will calibrate and apply a g_code Z offset to compensate for thermal expansion of the hotend from standard probe temperatures (~150-180) to print temperatures (~220-350C). The macro calibrates an expansion coefficent and calculates a specific z-offset based on the print temperature.
+This is a macro set that will calibrate and apply a GCODE Z offset to compensate for thermal expansion of the hotend. This is the thermal expansion that occuring as the system heats from standard probe temperatures (~150-180C) to printing temperatures (~220-350C). The macro calibrates an expansion coefficent and then calculates a specific z-offset based on the desired print temperature.
 
-# What the macro is doing
+# Calibration Routine Description
+1. Home all axis and perform a QGL/Tilt. 
+2. 10 poke operations to settle down the printer mechanics. 
+3. Heat to 150C, wait for the temperature to stabilize for 60s, and perform a probe operation.
+4. Heat to 250C, wait for the temperature to stabilize for 60s, and perform a probe operation.
+5. Repeat steps 3 and 4 again to ensure the results are repeatable.
+6. The hotend is moved back to a central position and the nozzle expansion data saved to the variables file. 
 
-The macro will home all axis and perform a QGL/Tilt using the printer default settings. After that it performs 10 poke operations to settle the printer mechanics. The macro will then heat to 150C, wait for the temperature to stabilize for 60s and perform a probe operation. This data is saved and then the hotend is heated to 250C for another stabilisation and probe operation. The macro then runs these two probe operations again to ensure the results are repeatable. The hotend is moved back to a central position and the nozzle expansion data saved to the variables file. Depending on how fast the hotend heats and cools down this could take 5-10min to complete.
+Depending on how fast the hotend heats and cools down this could take 5-10min to complete both probe cycles.
 
-A seperate macro called in print start will pull the nozzle expansion coefficent and extruder print temperature to calculate and apply the appropriate z_offset automatically at print time.
-
-The expansion offset calibration should only need to be calibrated one time for a given mechanical setup. The variable "beacon_contact_expansion_multiplier" could be tweaked to fine tune the offsets. Currently no strong guidance exists on this.
-
+A seperate macro called in print start will use the nozzle expansion coefficent and extruder print temperature to calculate and apply the appropriate z_offset automatically at print time.
 
 # Pre-Reqs
 - Beacon sensor updated to latest firmware version
@@ -22,23 +24,40 @@ The expansion offset calibration should only need to be calibrated one time for 
 [save_variables]
 filename: ~/printer_data/config/variables.txt
 ```
-- Ooze mitigation if 250C nozzle temp will lead to filament ooze. ?Suggest to perform this without filament fitted?
+- Ooze mitigation if 250C nozzle temp will lead to filament ooze. Best practice would be to perform this without filament to ensure no ooze is present.
+- Max nozzle contact temperature set to >250C. The default maximum probe temperature is set to 180C and will cause an error during 250C probing.
+```
+[beacon]
+BEACON_CALIBRATE_NOZZLE_TEMP_OFFSET: 275
+```
 
-# Steps
-- Copy macro block into your config
-- Review/adjust the default variables in BEACONTEMP (reccomended to use defaults right now)
-- Adjust print_start and print_end macros as below
-- Restart klipper
-- Run BEACON_CALIBRATE_NOZZLE_TEMP_OFFSET from the command line
-- Review the variables file to ensure there is an entry similar to
+> [!CAUTION]
+> Probing at higher temperatures, 250C, can cause damage to some build plates. Ensure that your setup can handle 250C contact probing without damage. Refer to the beacon contant documentation for additional details. 
+
+# Setup Steps
+1. Copy macro block into your config
+2. Review/adjust the default variables in BEACON (reccomended to use defaults right now)
+3. Add lines to PRINT_START and PRINT_END macros
+4. Restart klipper
+5. Run BEACON_CALIBRATE_NOZZLE_TEMP_OFFSET to perform the nozzle expansion calibration.
+6. Review the variables file to ensure there is a nozzle_expansion_coefficient entry.
   ```
   [Variables]
   nozzle_expansion_coefficient = 0.04749999999994525
   ```
-- Run a print!!!
+7. Run a print and monitor the first layer.
+
+
+If additional babystepping is required to tune the squish the following gcode could be added to the PRINT_START macro. This could be hard coded or passed via the slicer as {OFFSET}.
+```
+SET_GCODE_OFFSET Z_ADJUST={OFFSET}
+```
 
 # Print Start
-Apply this to the print start macro to calculate and apply a GCODE offset Z_adjust to the print. Note that this replaces "SET_GCODE_OFFSET" or "SET_GCODE_OFFSET" gcode lines as reccomended in the Beacon Contact Docs.
+Apply this to the print start macro to calculate and apply a GCODE offset Z_adjust to the print. Note that this replaces "SET_GCODE_OFFSET" gcode lines as reccomended in the Beacon Contact Docs.
+
+> [!Note]
+> Nozzle expansion calibration should be stable and only run if a mechanical change is made. BEACON_CALIBRATE_NOZZLE_TEMP_OFFSET should not need to be called in the PRINT_START macro.
 
 ```
 # set nozzle thermal expansion offset
@@ -58,8 +77,17 @@ This removes the applied offset at the end of the print.
 {% endif %}
 ```
 
+# Additional Configurations
+Some printers may require specific settings to ensure that the probe operations are completed with best accuracy. Specifically the probe speeds up/down and the probe retract distance. If these are not specified in [beacon] then the probe defaults are used.
+
+```
+[PROBE PARAMETER NAME] -> [BEACON CONFIG NAME]
+PROBE_SPEED            -> autocal_speed
+LIFT_SPEED             -> autocal_retract_speed
+SAMPLE_RETRACT_DIST    -> autocal_retract_dist
+```
 
 # Credits
 
-Credit to RatOS team for developing this macro. You can see their work in Beacon.cfg: https://github.com/Rat-OS/RatOS-configuration/blob/v2.1.x/z-probe/beacon.cfg
+Credit to RatOS team {Helge Keck and Mikkel Schmidt} for developing this macro. You can see their work in Beacon.cfg: https://github.com/Rat-OS/RatOS-configuration/blob/v2.1.x/z-probe/beacon.cfg
 
