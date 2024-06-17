@@ -47,8 +47,18 @@ BEACON_CALIBRATE_NOZZLE_TEMP_OFFSET: 275
   ```
 7. Run a print and monitor the first layer.
 
+# Fine Tuning
 
-If additional babystepping is required to tune the squish the following gcode could be added to the PRINT_START macro. This could be hard coded or passed via the slicer as {OFFSET}.
+If additional tuning is required for the first layer squish the following two methods are avaliable, in order of preference:
+
+## Adjust Expansion Multiplier
+The BEACON macro has a variable beacon_contact_expansion_multiplier that can be adjusted for fine tuning. This multiplier keeps the expansion compensation aligned to temperature and has emperically been found to be the best method to fine tune expansion compensation to print quality. A value of 1.1 produces 10% less first layer squish and 0.9 produces 10% more first layer squish.
+```
+variable_beacon_contact_expansion_multiplier: 1.0 
+```
+
+## Gcode Offset
+A gcode offset could be added to the PRINT_START macro. This could be hard coded or passed via the slicer as {OFFSET}. Note that this type of offset is not temperature dependent like the expansion multiplier.
 ```
 SET_GCODE_OFFSET Z_ADJUST={OFFSET}
 ```
